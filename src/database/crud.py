@@ -262,6 +262,31 @@ def create_registration_task(
     return db_task
 
 
+def create_registration_tasks_batch(
+    db: Session,
+    task_uuids: List[str],
+    email_service_id: Optional[int] = None,
+    proxy: Optional[str] = None,
+) -> int:
+    """批量创建注册任务（单次提交，减少大批量场景启动耗时）"""
+    if not task_uuids:
+        return 0
+
+    db_tasks = [
+        RegistrationTask(
+            task_uuid=task_uuid,
+            email_service_id=email_service_id,
+            proxy=proxy,
+            status='pending',
+        )
+        for task_uuid in task_uuids
+    ]
+
+    db.add_all(db_tasks)
+    db.commit()
+    return len(db_tasks)
+
+
 def get_registration_task_by_uuid(db: Session, task_uuid: str) -> Optional[RegistrationTask]:
     """根据 UUID 获取注册任务"""
     return db.query(RegistrationTask).filter(RegistrationTask.task_uuid == task_uuid).first()

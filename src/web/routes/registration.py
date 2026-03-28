@@ -120,7 +120,7 @@ class BatchRegistrationResponse(BaseModel):
     """批量注册响应"""
     batch_id: str
     count: int
-    tasks: List[RegistrationTaskResponse]
+    tasks: List[RegistrationTaskResponse] = []
 
 
 class TaskListResponse(BaseModel):
@@ -879,15 +879,15 @@ async def start_batch_registration(
     """
     启动批量注册任务
 
-    - count: 注册数量 (1-1000)
+    - count: 注册数量 (1-100000)
     - email_service_type: 邮箱服务类型
     - proxy: 代理地址
     - interval_min: 最小间隔秒数
     - interval_max: 最大间隔秒数
     """
     # 验证参数
-    if request.count < 1 or request.count > 1000:
-        raise HTTPException(status_code=400, detail="注册数量必须在 1-1000 之间")
+    if request.count < 1 or request.count > 100000:
+        raise HTTPException(status_code=400, detail="注册数量必须在 1-100000 之间")
 
     try:
         EmailServiceType(request.email_service_type)
@@ -908,21 +908,14 @@ async def start_batch_registration(
 
     # 创建批量任务
     batch_id = str(uuid.uuid4())
-    task_uuids = []
-
+    task_uuids = [str(uuid.uuid4()) for _ in range(request.count)]
     with get_db() as db:
-        for _ in range(request.count):
-            task_uuid = str(uuid.uuid4())
-            task = crud.create_registration_task(
-                db,
-                task_uuid=task_uuid,
-                proxy=request.proxy
-            )
-            task_uuids.append(task_uuid)
-
-    # 获取所有任务
-    with get_db() as db:
-        tasks = [crud.get_registration_task(db, uuid) for uuid in task_uuids]
+        crud.create_registration_tasks_batch(
+            db,
+            task_uuids=task_uuids,
+            email_service_id=None,
+            proxy=request.proxy,
+        )
 
     # 在后台运行批量注册
     background_tasks.add_task(
@@ -948,7 +941,7 @@ async def start_batch_registration(
     return BatchRegistrationResponse(
         batch_id=batch_id,
         count=request.count,
-        tasks=[task_to_response(t) for t in tasks if t]
+        tasks=[]
     )
 
 

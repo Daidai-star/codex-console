@@ -1,6 +1,7 @@
 @echo off
 setlocal
 setlocal enabledelayedexpansion
+set PYTHONUTF8=1
 
 echo === Build platform: Windows ===
 
@@ -12,7 +13,7 @@ if errorlevel 1 (
 
 if exist requirements.txt (
     echo Installing project dependencies...
-    python -m pip install -r requirements.txt
+    python -X utf8 -m pip install -r requirements.txt
     if errorlevel 1 (
         echo Failed to install project dependencies.
         exit /b 1
@@ -20,7 +21,7 @@ if exist requirements.txt (
 )
 
 echo Installing PyInstaller...
-python -m pip install pyinstaller --quiet
+python -X utf8 -m pip install pyinstaller --quiet
 if errorlevel 1 (
     echo Failed to install PyInstaller.
     exit /b 1
